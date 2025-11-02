@@ -94,7 +94,7 @@ body {
   display: flex;
   flex-direction: column;
   grid-area: main;
-  overflow: auto;
+  /* overflow removed - flex layout handles spacing, .messages handles scrolling */
   position: relative;
 
   .sidebar & {
