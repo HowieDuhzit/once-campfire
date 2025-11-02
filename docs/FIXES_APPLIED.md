@@ -52,15 +52,45 @@ Conflicting overflow declarations on `html, body`:
 
 ---
 
+### 3. Nested Scroll Container Fix
+**Priority:** Medium | **Effort:** Low | **Status:** ✅ Complete
+
+**Issue:**  
+Both `#main-content` and `.messages` had scroll capabilities, creating nested scrolling:
+- `#main-content` (`layout.css:97`): `overflow: auto` - could scroll entire area
+- `.messages` (`messages.css:77`): `overflow-y: auto` - scrolls message list
+
+**Solution:**
+- Removed `overflow: auto` from `#main-content` 
+- `#main-content` is now a flex container only (no scroll)
+- `.messages` remains the single scroll container
+- Flex layout (`display: flex; flex-direction: column`) naturally handles spacing
+- `.messages` with `flex: 1` takes available space and scrolls
+
+**Files Modified:**
+- `app/assets/stylesheets/layout.css` - Removed overflow from #main-content
+
+**Result:**
+- ✅ Simplified scrolling UX (single scroll container)
+- ✅ Video call stays visible (doesn't scroll with messages)
+- ✅ Composer stays at bottom
+- ✅ Clearer scroll behavior for users
+
+**See:** `docs/NESTED_SCROLL_ANALYSIS.md` for detailed analysis
+
+---
+
 ## 📊 Impact Summary
 
 ### Before
 - **Z-Index Conflicts:** 6 components using `z-index: 3`, sidebar had 2 conflicting values
 - **Overflow Conflicts:** 2 conflicting declarations on root elements
+- **Nested Scroll Containers:** Both `#main-content` and `.messages` scrollable
 
 ### After
 - **Z-Index Conflicts:** 5 components using `z-index: 3` (sidebar conflict resolved)
 - **Overflow Conflicts:** 0 conflicts (resolved)
+- **Nested Scroll Containers:** Single scroll container (`.messages` only)
 
 ### Remaining Issues
 - **Z-Index:** 5 other components still use `z-index: 3` (see `Z_INDEX_SCALE.md` for full analysis)
@@ -98,8 +128,8 @@ See `NEXT_STEPS.md` for remaining priorities:
 
 1. ✅ **Resolve Z-Index Conflicts** - DONE
 2. ✅ **Resolve Overflow Conflict** - DONE
-3. **Review Nested Scroll Containers** - Medium priority
-4. **Consolidate Sidebar Styles** - Medium priority
+3. ✅ **Fix Nested Scroll Containers** - DONE
+4. **Consolidate Sidebar Styles** - Medium priority (optional)
 5. **Cross-Browser Testing** - High priority (manual)
 
 ---
