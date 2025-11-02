@@ -1,0 +1,92 @@
+<% @page_title = "LiveKit Configuration" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_to edit_account_path, class: "btn" do %>
+      <%= image_tag "arrow-left.svg", aria: { hidden: "true" }, size: 20 %>
+      <span class="for-screen-reader">Back to account settings</span>
+    <% end %>
+  </div>
+
+  <div class="flex align-center gap flex-item-justify-end">
+    <%= link_to edit_account_livekit_config_path, class: "btn" do %>
+      <%= image_tag "edit.svg", aria: { hidden: "true" }, size: 20 %>
+      <span class="for-screen-reader">Edit LiveKit configuration</span>
+    <% end %>
+  </div>
+<% end %>
+
+<section class="panel txt-align-center flex flex-column gap" style="view-transition-name: livekit-config">
+  <div class="flex align-center gap">
+    <%= image_tag "microphone.svg", size: 32, aria: { hidden: "true" } %>
+    <h1 class="txt-x-large">LiveKit Voice Chat</h1>
+  </div>
+
+  <div class="flex flex-column gap txt-align-left">
+    <div class="flex align-center gap">
+      <span class="txt-medium">Status:</span>
+      <% if @account.livekit_enabled? && @account.livekit_configured? %>
+        <span class="badge badge--success">✓ Configured & Enabled</span>
+      <% elsif @account.livekit_configured? %>
+        <span class="badge badge--warning">⚠ Configured but Disabled</span>
+      <% else %>
+        <span class="badge badge--error">✗ Not Configured</span>
+      <% end %>
+    </div>
+
+    <% if @account.livekit_configured? %>
+      <div class="flex flex-column gap">
+        <div class="flex align-center gap">
+          <span class="txt-medium">API Key:</span>
+          <code class="txt-small"><%= @account.livekit_api_key&.truncate(20) %></code>
+        </div>
+        
+        <div class="flex align-center gap">
+          <span class="txt-medium">Host:</span>
+          <code class="txt-small"><%= @account.livekit_host %></code>
+        </div>
+        
+        <% if @account.livekit_http_url.present? %>
+          <div class="flex align-center gap">
+            <span class="txt-medium">HTTP URL:</span>
+            <code class="txt-small"><%= @account.livekit_http_url %></code>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="flex flex-column gap">
+    <p class="txt-subtle">
+      LiveKit enables voice chat functionality in all rooms. Configure your LiveKit server 
+      credentials to enable voice features for your users.
+    </p>
+
+    <div class="flex gap">
+      <%= link_to edit_account_livekit_config_path, class: "btn btn--primary" do %>
+        <%= image_tag "edit.svg", aria: { hidden: "true" }, size: 20 %>
+        <%= @account.livekit_configured? ? "Update Configuration" : "Configure LiveKit" %>
+      <% end %>
+
+      <% if @account.livekit_configured? %>
+        <%= button_to test_connection_account_livekit_config_path, 
+              method: :post, 
+              class: "btn btn--secondary",
+              data: { 
+                controller: "livekit-test",
+                action: "click->livekit-test#testConnection"
+              } do %>
+          <%= image_tag "check.svg", aria: { hidden: "true" }, size: 20 %>
+          Test Connection
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>
+
+<% content_for :footer do %>
+  <div class="txt-align-center center margin-block-double txt-subtle">
+    LiveKit configuration for voice chat functionality
+  </div>
+<% end %>
+

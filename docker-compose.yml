@@ -1,0 +1,32 @@
+services:
+  campfire:
+    image: ruby:3.2-slim
+    ports:
+      - "3000:3000"
+    environment:
+      - RAILS_ENV=development
+      - SECRET_KEY_BASE=dummy_key_for_development
+      - LIVEKIT_API_KEY=test_api_key
+      - LIVEKIT_API_SECRET=test_api_secret
+      - LIVEKIT_HOST=wss://livekit.example.com
+      - LIVEKIT_HTTP_URL=https://livekit.example.com
+    volumes:
+      - .:/rails
+    working_dir: /rails
+    command: >
+      sh -c "
+        apt-get update -qq &&
+        apt-get install -y build-essential git pkg-config libyaml-dev libsqlite3-dev libssl-dev libffi-dev &&
+        gem install bundler &&
+        bundle config set frozen false &&
+        bundle install &&
+        rails db:create db:migrate &&
+        rails server -b 0.0.0.0 -p 3000
+      "
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

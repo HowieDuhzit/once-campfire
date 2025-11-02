@@ -1,0 +1,23 @@
+<div class="voice-participants-list" 
+     data-controller="voice-presence"
+     data-voice-presence-room-id-value="<%= @room.id %>">
+  
+  <div class="voice-participants-list__header">
+    <h4>Voice Participants</h4>
+    <span class="voice-participants-list__count" 
+          data-voice-presence-target="participantCount">0</span>
+  </div>
+  
+  <div class="voice-participants-list__content" 
+       data-voice-presence-target="participantsList">
+    <!-- Participants will be populated by JavaScript -->
+  </div>
+  
+  <div class="voice-participants-list__footer">
+    <small class="voice-participants-list__status" 
+           data-voice-presence-target="status">
+      <!-- Status messages will be shown here -->
+    </small>
+  </div>
+</div>
+

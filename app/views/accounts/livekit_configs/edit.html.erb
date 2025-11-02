@@ -1,0 +1,129 @@
+<% @page_title = "Edit LiveKit Configuration" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_to account_livekit_config_path, class: "btn" do %>
+      <%= image_tag "arrow-left.svg", aria: { hidden: "true" }, size: 20 %>
+      <span class="for-screen-reader">Back to LiveKit configuration</span>
+    <% end %>
+  </div>
+
+  <div class="flex align-center gap flex-item-justify-end">
+    <%= link_to account_livekit_config_path, class: "btn" do %>
+      <%= image_tag "check.svg", aria: { hidden: "true" }, size: 20 %>
+      <span class="for-screen-reader">Save changes</span>
+    <% end %>
+  </div>
+<% end %>
+
+<section class="panel txt-align-center flex flex-column gap" style="view-transition-name: livekit-config-edit">
+  <div class="flex align-center gap">
+    <%= image_tag "microphone.svg", size: 32, aria: { hidden: "true" } %>
+    <h1 class="txt-x-large">Configure LiveKit</h1>
+  </div>
+
+  <%= form_with model: @account, url: account_livekit_config_path, method: :patch, 
+        data: { controller: "form livekit-config" }, 
+        class: "flex flex-column gap txt-align-left" do |form| %>
+    
+    <div class="flex flex-column gap">
+      <h2 class="txt-large">LiveKit Server Settings</h2>
+      
+      <div class="flex flex-column gap">
+        <label class="flex flex-column gap">
+          <span class="txt-medium">API Key <span class="txt-error">*</span></span>
+          <%= form.text_field :livekit_api_key, 
+                class: "input", 
+                placeholder: "Enter your LiveKit API key",
+                data: { livekit_config_target: "apiKey" } %>
+          <small class="txt-subtle">Your LiveKit server API key</small>
+        </label>
+
+        <label class="flex flex-column gap">
+          <span class="txt-medium">API Secret <span class="txt-error">*</span></span>
+          <%= form.password_field :livekit_api_secret, 
+                class: "input", 
+                placeholder: "Enter your LiveKit API secret",
+                data: { livekit_config_target: "apiSecret" } %>
+          <small class="txt-subtle">Your LiveKit server API secret for JWT signing</small>
+        </label>
+
+        <label class="flex flex-column gap">
+          <span class="txt-medium">WebSocket Host <span class="txt-error">*</span></span>
+          <%= form.url_field :livekit_host, 
+                class: "input", 
+                placeholder: "wss://livekit.example.com",
+                data: { livekit_config_target: "host" } %>
+          <small class="txt-subtle">WebSocket URL for LiveKit server (e.g., wss://livekit.example.com)</small>
+        </label>
+
+        <label class="flex flex-column gap">
+          <span class="txt-medium">HTTP URL (Optional)</span>
+          <%= form.url_field :livekit_http_url, 
+                class: "input", 
+                placeholder: "https://livekit.example.com",
+                data: { livekit_config_target: "httpUrl" } %>
+          <small class="txt-subtle">HTTP URL for LiveKit API (optional, defaults to derived from WebSocket host)</small>
+        </label>
+      </div>
+    </div>
+
+    <hr class="separator full-width">
+
+    <div class="flex flex-column gap">
+      <h2 class="txt-large">Voice Chat Settings</h2>
+      
+      <label class="flex align-center gap">
+        <%= form.check_box :livekit_enabled, 
+              class: "input", 
+              data: { livekit_config_target: "enabled" } %>
+        <span class="txt-medium">Enable voice chat for all rooms</span>
+      </label>
+      <small class="txt-subtle">
+        When enabled, users will see voice chat controls in all room types (open, closed, direct messages)
+      </small>
+    </div>
+
+    <hr class="separator full-width">
+
+    <div class="flex flex-column gap">
+      <h2 class="txt-large">Webhook Configuration</h2>
+      <div class="flex flex-column gap pad border-radius fill-shade">
+        <p class="txt-medium">Configure your LiveKit server to send webhooks to:</p>
+        <code class="txt-small pad border-radius" style="background: var(--color-bg); font-family: monospace;">
+          <%= request.base_url %>/livekit/webhook
+        </code>
+        <small class="txt-subtle">
+          This webhook URL is used to sync voice participant state between LiveKit and Campfire.
+        </small>
+      </div>
+    </div>
+
+    <div class="flex gap">
+      <%= form.button type: "submit", class: "btn btn--primary" do %>
+        <%= image_tag "check.svg", aria: { hidden: "true" }, size: 20 %>
+        Save Configuration
+      <% end %>
+
+      <%= link_to account_livekit_config_path, class: "btn btn--secondary" do %>
+        <%= image_tag "x.svg", aria: { hidden: "true" }, size: 20 %>
+        Cancel
+      <% end %>
+
+      <button type="button" 
+              class="btn btn--tertiary"
+              data-action="click->livekit-config#testConnection"
+              data-livekit-config-target="testButton">
+        <%= image_tag "check.svg", aria: { hidden: "true" }, size: 20 %>
+        Test Connection
+      </button>
+    </div>
+  <% end %>
+</section>
+
+<% content_for :footer do %>
+  <div class="txt-align-center center margin-block-double txt-subtle">
+    Configure LiveKit server settings for voice chat functionality
+  </div>
+<% end %>
+

@@ -1,0 +1,47 @@
+services:
+  campfire:
+    image: howieduhzit/campfire-livekit:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - RAILS_ENV=production
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - LIVEKIT_HOST=${LIVEKIT_HOST}
+      - LIVEKIT_HTTP_URL=${LIVEKIT_HTTP_URL}
+      - MEET_URL=http://livekit-meet:3000
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - campfire_data:/rails/storage
+      - campfire_logs:/rails/log
+    depends_on:
+      - redis
+      - livekit-meet
+    restart: unless-stopped
+
+  livekit-meet:
+    build:
+      context: ./livekit-meet
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_LIVEKIT_URL=${LIVEKIT_HOST}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  campfire_data:
+  campfire_logs:
+  redis_data:

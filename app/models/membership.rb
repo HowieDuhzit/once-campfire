@@ -21,4 +21,16 @@ class Membership < ApplicationRecord
   def unread?
     unread_at.present?
   end
+
+  def in_voice_chat?
+    in_voice_chat_at.present?
+  end
+
+  def join_voice_chat!
+    update!(in_voice_chat_at: Time.current)
+  end
+
+  def leave_voice_chat!
+    update!(in_voice_chat_at: nil)
+  end
 end

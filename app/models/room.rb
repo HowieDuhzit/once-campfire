@@ -64,6 +64,22 @@ class Room < ApplicationRecord
     "mentions"
   end
 
+  def voice_enabled?
+    voice_enabled
+  end
+
+  def voice_participants
+    memberships.where.not(in_voice_chat_at: nil).includes(:user)
+  end
+
+  def voice_participant_count
+    voice_participants.count
+  end
+
+  def in_voice_chat?(user)
+    memberships.find_by(user: user)&.in_voice_chat_at.present?
+  end
+
   private
     def unread_memberships(message)
       memberships.visible.disconnected.where.not(user: message.creator).update_all(unread_at: message.created_at, updated_at: Time.current)

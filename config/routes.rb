@@ -22,6 +22,9 @@ Rails.application.routes.draw do
       resource :join_code, only: :create
       resource :logo, only: %i[ show destroy ]
       resource :custom_styles, only: %i[ edit update ]
+      resource :livekit_config, only: %i[ show edit update ] do
+        post :test_connection, on: :member
+      end
     end
   end
 
@@ -67,6 +70,10 @@ Rails.application.routes.draw do
       resource :refresh, only: :show
       resource :settings, only: :show
       resource :involvement, only: %i[ show update ]
+      resource :voice_chat, only: %i[ create ], controller: "voice_chats" do
+        get :join, on: :member, action: "join"
+        delete :leave, on: :member
+      end
     end
 
     get "@:message_id", to: "rooms#show", as: :at_message
@@ -92,6 +99,9 @@ Rails.application.routes.draw do
 
   get "webmanifest"    => "pwa#manifest"
   get "service-worker" => "pwa#service_worker"
+
+  # LiveKit webhook endpoint
+  post "/livekit/webhook", to: "livekit_webhooks#create"
 
   get "up" => "rails/health#show", as: :rails_health_check
 end
