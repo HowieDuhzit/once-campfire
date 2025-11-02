@@ -117,7 +117,7 @@ body {
     background-color: oklch(var(--lch-white) / 0.66);
     block-size: 100dvh;
     max-block-size: 100dvh;
-    z-index: 3;
+    /* z-index removed - sidebar.css sets z-index: 10 for this element */
 
     @media (max-width: 100ch) {
       inset: 0;

@@ -11,7 +11,7 @@ html, body {
   color: var(--color-text);
   font-family: var(--font-family);
   line-height: 1.4;
-  overflow: initial;
+  /* overflow removed - _reset.css sets overflow-x: hidden to prevent horizontal scrolling */
   text-size-adjust: none;
 }
 
