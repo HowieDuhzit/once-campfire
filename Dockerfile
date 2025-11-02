@@ -42,7 +42,9 @@ RUN bundle config set --local frozen false && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
 
 # Precompiling assets for production without requiring secret RAILS_MASTER_KEY
-RUN RAILS_ENV=production SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+# Clear any cached assets to ensure fresh compilation with latest CSS changes
+RUN rm -rf tmp/cache public/assets && \
+    RAILS_ENV=production SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 
 # Final stage for app image
