@@ -2,6 +2,31 @@
   <%= turbo_stream_from :rooms %>
   <%= turbo_stream_from Current.user, :rooms %>
 
+  <div class="sidebar__navbar" data-controller="sidebar-navbar">
+    <% if Current.account.logo.attached? %>
+      <%= account_logo_tag %>
+    <% end %>
+    
+    <% if @current_room %>
+      <div class="sidebar__room-header">
+        <%= tag.span class: "btn btn--reversed btn--faux room--current sidebar__room-name" do %>
+          <h1 class="room__contents txt-medium overflow-ellipsis">
+            <% if @current_room.direct? %>
+              <span class="for-screen-reader">Ping with</span>
+            <% end %>
+            <%= room_display_name(@current_room) %>
+          </h1>
+        <% end %>
+        
+        <% edit_path = @current_room.open? ? edit_rooms_open_path(@current_room) : @current_room.closed? ? edit_rooms_closed_path(@current_room) : edit_rooms_direct_path(@current_room) %>
+        <%= link_to edit_path, class: "btn sidebar__room-edit", style: "view-transition-name: edit-room-#{@current_room.id}", data: { room_id: @current_room.id } do %>
+          <%= image_tag "menu-dots-horizontal.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
+          <span class="for-screen-reader">Settings for this <%= @current_room.direct? ? "Ping" : "room" %></span>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
   <div class="sidebar__container overflow-y overflow-hide-scrollbar"
       data-controller="badge-dot"
       data-badge-dot-unread-class="unread"
@@ -32,7 +57,7 @@
     <div class="rooms position-relative flex flex-column gap">
       <div id="shared_rooms" contents data-controller="sorted-list">
         <% @other_memberships.each do |membership| %>
-          <%= render "users/sidebars/rooms/shared", room: membership.room, unread: membership.unread? %>
+          <%= render "users/sidebars/rooms/shared", room: membership.room, unread: membership.unread?, current_room: @current_room %>
         <% end %>
       </div>
 
@@ -48,6 +73,10 @@
   </div>
 
   <div class="flex align-end sidebar__tools gap justify-end">
+    <% if @current_room %>
+      <%= render "rooms/involvements/bell", room: @current_room %>
+    <% end %>
+    
     <%= link_to user_profile_path, class: "btn avatar flex-item-no-shrink sidebar__tool" do %>
       <%= image_tag fresh_user_avatar_path(Current.user), size: 48, aria: { hidden: "true" }, style: "view-transition-name: avatar-#{Current.user.id}" %>
       <span class="for-screen-reader">My Settings</span>

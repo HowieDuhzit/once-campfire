@@ -1,5 +1,14 @@
-<%= link_to_room room,
-      id: dom_id(room, :list), data: { sorted_list_name: room.name },
-      style: "--column-gap: 0.5em", class: [ "align-center gap room btn txt-nowrap", "unread": local_assigns[:unread] ] do %>
-  <span class="overflow-ellipsis"><%= room.name %></span>
-<% end %>
+<div class="flex align-center gap" style="--column-gap: 0.5em">
+  <% if local_assigns[:current_room] && local_assigns[:current_room].id == room.id %>
+    <% edit_path = room.open? ? edit_rooms_open_path(room) : room.closed? ? edit_rooms_closed_path(room) : edit_rooms_direct_path(room) %>
+    <%= link_to edit_path, class: "btn", style: "view-transition-name: edit-room-#{room.id}", data: { room_id: room.id } do %>
+      <%= image_tag "menu-dots-horizontal.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
+      <span class="for-screen-reader">Settings for this <%= room.direct? ? "Ping" : "room" %></span>
+    <% end %>
+  <% end %>
+  <%= link_to_room room,
+        id: dom_id(room, :list), data: { sorted_list_name: room.name },
+        class: [ "align-center gap room btn txt-nowrap", "unread": local_assigns[:unread], "room--current": (local_assigns[:current_room] && local_assigns[:current_room].id == room.id) ] do %>
+    <span class="overflow-ellipsis"><%= room.name %></span>
+  <% end %>
+</div>
