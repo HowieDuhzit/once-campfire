@@ -1,0 +1,65 @@
+<%
+  meet_origin = nil
+  meet_url = Rails.application.config.x.livekit&.meet_url || ENV["MEET_URL"]
+  if meet_url.present?
+    begin
+      meet_origin = URI.parse(meet_url).origin
+    rescue URI::InvalidURIError
+      meet_origin = nil
+    end
+  end
+%>
+
+<div class="flex align-center gap"
+     data-controller="voice-meet"
+     data-voice-meet-room-id-value="<%= room.id %>"
+     <%= meet_origin.present? ? "data-voice-meet-meet-origin-value=\"#{meet_origin}\"" : "" %>>
+  <% if Current.account.livekit_enabled? %>
+    <%= link_to join_room_voice_chat_path(room),
+          class: "btn btn--reversed",
+          target: "_blank",
+          rel: "noopener",
+          data: { action: "click->voice-meet#openInNewWindow", voice_meet_target: "joinButton" } do %>
+      <%= image_tag "microphone.svg", size: 20, aria: { hidden: "true" } %>
+      Join Voice/Video
+    <% end %>
+
+    <button type="button"
+            class="btn btn--reversed"
+            data-action="click->voice-meet#loadMeetInIframe">
+      Open Here
+    </button>
+  <% else %>
+    <span class="btn btn--reversed btn--disabled" title="Configure LiveKit to enable voice chat">
+      Voice/Video Unavailable
+    </span>
+  <% end %>
+
+  <span class="badge badge--info"
+        data-voice-meet-target="participantCount"
+        style="display: none;">
+    0
+  </span>
+</div>
+
+<div class="voice-meet-embed hidden" data-voice-meet-target="container">
+  <div class="flex align-center gap margin-block-half">
+    <button type="button"
+            class="btn btn--secondary"
+            data-voice-meet-target="closeButton"
+            data-action="click->voice-meet#close">
+      Back to Room
+    </button>
+  </div>
+
+  <iframe
+    class="voice-meet-embed__frame"
+    data-voice-meet-target="iframe"
+    title="LiveKit Meet"
+    allow="camera; microphone; fullscreen; display-capture"
+    referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+
+<% if Current.account.livekit_enabled? %>
+  <%= render "rooms/voice_chats/participants", room: room %>
+<% end %>

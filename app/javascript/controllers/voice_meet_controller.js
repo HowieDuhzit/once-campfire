@@ -2,10 +2,12 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["joinButton", "container", "iframe", "closeButton", "participantCount"]
-  static values = { roomId: Number }
+  static values = { roomId: Number, meetOrigin: String }
 
   connect() {
     console.log("VoiceMeetController connected for room", this.roomIdValue)
+    this.boundHandleMeetMessage = this.handleMeetMessage.bind(this)
+    window.addEventListener("message", this.boundHandleMeetMessage)
     
     // Check if we're in iframe mode
     const urlParams = new URLSearchParams(window.location.search)
@@ -14,8 +16,16 @@ export default class extends Controller {
     }
   }
 
+  disconnect() {
+    if (this.boundHandleMeetMessage) {
+      window.removeEventListener("message", this.boundHandleMeetMessage)
+    }
+  }
+
   async loadMeetInIframe() {
     try {
+      this.trackVoiceJoin()
+
       // Fetch the Meet URL from the backend  
       const response = await fetch(`/rooms/${this.roomIdValue}/voice_chat/join?embed=true&format=json`, {
         method: "GET",
@@ -57,6 +67,10 @@ export default class extends Controller {
     if (this.hasContainerTarget) {
       this.containerTarget.classList.add("hidden")
     }
+
+    if (this.hasIframeTarget) {
+      this.iframeTarget.src = ""
+    }
     
     // Notify that user left voice
     this.trackVoiceLeave()
@@ -85,7 +99,9 @@ export default class extends Controller {
   // Handle messages from Meet iframe (postMessage)
   handleMeetMessage(event) {
     // Validate origin if needed
-    // if (event.origin !== EXPECTED_MEET_ORIGIN) return
+    if (this.hasMeetOriginValue && event.origin !== this.meetOriginValue) {
+      return
+    }
     
     const data = event.data
     switch (data.type) {
@@ -103,10 +119,8 @@ export default class extends Controller {
 
   updateParticipantCount(count) {
     if (this.hasParticipantCountTarget) {
-      const countElement = this.participantCountTarget.querySelector("[data-voice-presence-target='count']")
-      if (countElement) {
-        countElement.textContent = count
-      }
+      this.participantCountTarget.textContent = count
+      this.participantCountTarget.style.display = count > 0 ? "inline-flex" : "none"
     }
   }
 }

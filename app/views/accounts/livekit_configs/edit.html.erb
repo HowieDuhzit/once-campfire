@@ -35,7 +35,10 @@
           <%= form.text_field :livekit_api_key, 
                 class: "input", 
                 placeholder: "Enter your LiveKit API key",
-                data: { livekit_config_target: "apiKey" } %>
+                data: { 
+                  livekit_config_target: "apiKey",
+                  action: "input->livekit-config#validateInput"
+                } %>
           <small class="txt-subtle">Your LiveKit server API key</small>
         </label>
 
@@ -44,7 +47,10 @@
           <%= form.password_field :livekit_api_secret, 
                 class: "input", 
                 placeholder: "Enter your LiveKit API secret",
-                data: { livekit_config_target: "apiSecret" } %>
+                data: { 
+                  livekit_config_target: "apiSecret",
+                  action: "input->livekit-config#validateInput"
+                } %>
           <small class="txt-subtle">Your LiveKit server API secret for JWT signing</small>
         </label>
 
@@ -53,7 +59,10 @@
           <%= form.url_field :livekit_host, 
                 class: "input", 
                 placeholder: "wss://livekit.example.com",
-                data: { livekit_config_target: "host" } %>
+                data: { 
+                  livekit_config_target: "host",
+                  action: "input->livekit-config#onHostChange"
+                } %>
           <small class="txt-subtle">WebSocket URL for LiveKit server (e.g., wss://livekit.example.com)</small>
         </label>
 
@@ -62,7 +71,10 @@
           <%= form.url_field :livekit_http_url, 
                 class: "input", 
                 placeholder: "https://livekit.example.com",
-                data: { livekit_config_target: "httpUrl" } %>
+                data: { 
+                  livekit_config_target: "httpUrl",
+                  action: "input->livekit-config#validateInput"
+                } %>
           <small class="txt-subtle">HTTP URL for LiveKit API (optional, defaults to derived from WebSocket host)</small>
         </label>
       </div>
@@ -118,6 +130,7 @@
         Test Connection
       </button>
     </div>
+    <div data-livekit-config-target="status"></div>
   <% end %>
 </section>
 
@@ -126,4 +139,3 @@
     Configure LiveKit server settings for voice chat functionality
   </div>
 <% end %>
-
