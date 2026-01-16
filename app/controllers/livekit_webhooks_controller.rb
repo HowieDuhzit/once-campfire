@@ -4,7 +4,7 @@ class LivekitWebhooksController < ApplicationController
   before_action :verify_webhook_signature
 
   def create
-    webhook_data = JSON.parse(request.body.read)
+    webhook_data = JSON.parse(raw_webhook_body)
     
     case webhook_data['event']
     when 'room_started'
@@ -33,12 +33,16 @@ class LivekitWebhooksController < ApplicationController
 
     def verify_webhook_signature
       signature = request.headers['Authorization']&.gsub('Bearer ', '')
-      payload = request.body.read
-      
+      payload = raw_webhook_body
+
       unless LiveKitService.validate_webhook_signature(payload, signature)
         head :unauthorized
         return
       end
+    end
+
+    def raw_webhook_body
+      @raw_webhook_body ||= request.raw_post
     end
 
     def handle_room_started(webhook_data)
@@ -191,4 +195,3 @@ class LivekitWebhooksController < ApplicationController
       identity.gsub('user-', '').to_i
     end
 end
-
