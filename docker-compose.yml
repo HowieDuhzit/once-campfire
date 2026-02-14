@@ -22,7 +22,7 @@ services:
       - 'LIVEKIT_KEYS=${LIVEKIT_API_KEY:-livekit_dev_api_key_1234567890abcdefABCDEF}: ${LIVEKIT_API_SECRET:-livekit_dev_secret_1234567890abcdefABCDEF}'
       - LIVEKIT_REDIS_ADDRESS=redis:6379
     volumes:
-      - ./docker/livekit/livekit.yaml:/config/livekit.yaml:ro
+      - ./docker/livekit:/config:ro
       - ./certs:/certs:ro
     ports:
       - "7880:7880/tcp"
