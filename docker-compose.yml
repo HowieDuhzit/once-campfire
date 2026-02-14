@@ -39,7 +39,7 @@ services:
     volumes:
       - 'campfire-storage:/rails/storage'
     environment:
-      - SERVICE_URL_CAMPFIRE_80
+      - SERVICE_URL_CAMPFIRE_80=https://${CAMPFIRE_HOST:-campfire.localhost}
       - 'SERVICE_BASE64_64_CAMPFIRE=${SERVICE_BASE64_64_CAMPFIRE:-devcampfire}'
       - 'SECRET_KEY_BASE=${SECRET_KEY_BASE:-dev_secret_key_base}'
       - 'VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}'
@@ -48,7 +48,7 @@ services:
       - 'SSL_DOMAIN=${SSL_DOMAIN:-false}'
       - 'SKIP_TELEMETRY=${SKIP_TELEMETRY:-true}'
       - 'SENTRY_DSN=${SENTRY_DSN}'
-      - 'LIVEKIT_URL=${LIVEKIT_URL:-http://livekit:7880}'
+      - 'LIVEKIT_URL=https://${LIVEKIT_HOST:-livekit.localhost}'
       - 'LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-livekit_dev_api_key_1234567890abcdefABCDEF}'
       - 'LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-livekit_dev_secret_1234567890abcdefABCDEF}'
     healthcheck:
@@ -60,6 +60,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - campfire
+
+  proxy:
+    image: caddy:2.9.0
+    restart: unless-stopped
+    depends_on:
+      - campfire
+      - livekit
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CAMPFIRE_HOST=${CAMPFIRE_HOST:-campfire.localhost}
+      - LIVEKIT_HOST=${LIVEKIT_HOST:-livekit.localhost}
+      - TLS_DIRECTIVE=${TLS_DIRECTIVE:-tls internal}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
     networks:
       - campfire
 

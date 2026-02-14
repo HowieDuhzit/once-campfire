@@ -1,0 +1,24 @@
+{
+  admin off
+  debug
+}
+
+http://{$CAMPFIRE_HOST} {
+  redir https://{$CAMPFIRE_HOST}{uri}
+}
+
+http://{$LIVEKIT_HOST} {
+  redir https://{$LIVEKIT_HOST}{uri}
+}
+
+https://{$CAMPFIRE_HOST} {
+  {$TLS_DIRECTIVE}
+  header_up X-Forwarded-Proto https
+  reverse_proxy campfire:80 campfire:3000
+}
+
+https://{$LIVEKIT_HOST} {
+  {$TLS_DIRECTIVE}
+  header_up X-Forwarded-Proto https
+  reverse_proxy livekit:7880
+}
