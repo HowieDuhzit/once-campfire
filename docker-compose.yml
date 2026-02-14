@@ -64,7 +64,7 @@ services:
       - campfire
 
   proxy:
-    image: caddy:2.9.0
+    image: caddy:2.8.5
     restart: unless-stopped
     depends_on:
       - campfire
