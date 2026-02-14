@@ -1,0 +1,31 @@
+# Minimal LiveKit configuration used by the AllInOne stack.
+# Use LIVEKIT_KEYS (key:secret) and LIVEKIT_REDIS_ADDRESS via Docker Compose to keep secrets outside the config file.
+
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: false
+
+room:
+  auto_create: true
+  max_participants: 150
+
+logging:
+  level: info
+  color: true
+
+redis:
+  address: redis:6379
+
+turn:
+  enabled: false  # enable TLS/UDP TURN by setting this to true and mounting certificates at /certs
+  tls_port: 5349
+  udp_port: 3478
+  realm: livekit.local
+  cert: /certs/livekit.crt
+  key: /certs/livekit.key
