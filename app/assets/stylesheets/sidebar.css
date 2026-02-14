@@ -75,7 +75,7 @@
   }
 }
 
-/* Direct messsages */
+/* Direct messages */
 .directs {
   --btn-border-color: var(--color-border-darker);
   --column-gap: calc(var(--inline-space) / 1.5);

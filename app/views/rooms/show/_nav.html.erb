@@ -11,10 +11,8 @@
     </h1>
   <% end %>
 
-  <%= link_to_edit_room(room) do %>
+  <%= link_to_edit_room(room, class: "nav__room-settings") do %>
     <%= image_tag "menu-dots-horizontal.svg", size: 20, aria: { hidden: "true" } %>
     <span class="for-screen-reader">Settings for this <%= room.direct? ? "Ping" : "room" %></span>
   <% end %>
-
-  <%= render "rooms/involvements/bell", room: room %>
 <% end %>
