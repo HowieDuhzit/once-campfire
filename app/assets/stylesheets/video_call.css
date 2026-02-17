@@ -351,6 +351,10 @@
   opacity: 1;
 }
 
+.video-call--idle {
+  opacity: 1;
+}
+
 .video-call--reconnecting {
   opacity: 0.7;
   position: relative;

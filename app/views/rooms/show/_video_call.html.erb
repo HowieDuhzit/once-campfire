@@ -90,5 +90,17 @@
       </span>
       <span class="video-call__button-label" data-video-call-target="joinLeaveLabel">Join</span>
     </button>
+
+    <button type="button"
+            class="video-call__button video-call__button--switch"
+            data-video-call-target="switchRoomButton"
+            data-action="click->video-call#switchToCurrentRoomVoice"
+            aria-label="Switch voice call to this room"
+            style="display: none;">
+      <span class="video-call__button-icon">
+        <%= image_tag "share.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
+      </span>
+      <span class="video-call__button-label" data-video-call-target="switchRoomLabel">Switch Voice</span>
+    </button>
   </div>
 </div>

@@ -3,6 +3,7 @@
 <% content_for :head do %>
   <%= turbo_exempts_page_from_preview %>
   <meta name="current-room-id" content="<%= @room.id %>">
+  <meta name="current-room-name" content="<%= room_display_name(@room) %>">
 <% end %>
 
 <%= render "rooms/show/nav", room: @room %>

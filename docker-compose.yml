@@ -1,32 +1,54 @@
 services:
-  campfire:
-    image: 'howieduhzit/campfire:meet-latest'
+  campkit:
+    build: .
     restart: unless-stopped
+    depends_on:
+      - redis
+      - livekit
+    command: ./bin/start-app
+    ports:
+      - "3000:3000"
     volumes:
-      - 'campfire-storage:/rails/storage'
+      - campkit-storage:/rails/storage
     environment:
-      - SERVICE_URL_CAMPFIRE_80
-      - 'SECRET_KEY_BASE=${SERVICE_BASE64_64_CAMPFIRE}'
-      - 'VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}'
-      - 'VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}'
-      - 'DISABLE_SSL=${DISABLE_SSL:-true}'
-      - 'SSL_DOMAIN=${SSL_DOMAIN:-false}'
-      - 'SKIP_TELEMETRY=${SKIP_TELEMETRY:-true}'
-      - 'SENTRY_DSN=${SENTRY_DSN}'
-      - 'LIVEKIT_URL=${LIVEKIT_URL}'
-      - 'LIVEKIT_API_KEY=${LIVEKIT_API_KEY}'
-      - 'LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}'
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-local-dev-secret-key-base-change-me}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      DISABLE_SSL: ${DISABLE_SSL:-true}
+      SKIP_TELEMETRY: ${SKIP_TELEMETRY:-true}
+      RAILS_ENV: ${RAILS_ENV:-production}
+      REDIS_URL: redis://redis:6379
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devsecret_devsecret_devsecret_1234}
     healthcheck:
-      test:
-        - CMD
-        - curl
-        - '-f'
-        - 'http://localhost/up'
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/up" ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [ "redis-server", "--appendonly", "no", "--save", "" ]
+    ports:
+      - "6379:6379"
+
+  livekit:
+    image: livekit/livekit-server:v1.9.3
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret_devsecret_devsecret_1234}"
+    command: [ "--config", "/etc/livekit/livekit.yaml" ]
+    volumes:
+      - ./ops/livekit.yaml:/etc/livekit/livekit.yaml:ro
+    ports:
+      - "7880:7880/tcp"
+      - "7881:7881/tcp"
+      - "3478:3478/udp"
+      - "50000-50100:50000-50100/udp"
 
 volumes:
-  campfire-storage:
-
-
+  campkit-storage:

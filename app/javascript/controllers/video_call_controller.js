@@ -12,6 +12,8 @@ export default class extends Controller {
     "joinLeaveButton",
     "joinLeaveIcon",
     "joinLeaveLabel",
+    "switchRoomButton",
+    "switchRoomLabel",
     "errorMessage"
   ]
   static classes = [ "active", "muted", "hidden" ]
@@ -50,12 +52,14 @@ export default class extends Controller {
   #isStartingCall = false
   #observerUnavailable = false
   #observerEnabled = false
+  #roomName = ""
 
   async connect() {
     this.#configureDiagnostics()
     this.#setupEventListeners()
     this.#bindTurboHandlers()
     this.#updateRoomContextFromMeta()
+    this.#updateConnectionState("idle")
     // Update button immediately - DOM should be ready in connect()
     this.#updateJoinLeaveButton()
     const livekitConfigured = this.#isLiveKitConfigured()
@@ -117,9 +121,15 @@ export default class extends Controller {
   toggleJoinLeave() {
     if (this.#isInCall) {
       this.leave()
+    } else if (this.#hasActiveCallInAnotherRoom()) {
+      this.#leaveActiveCall()
     } else {
       this.startVideoCall()
     }
+  }
+
+  switchToCurrentRoomVoice() {
+    this.startVideoCall()
   }
 
 
@@ -222,12 +232,13 @@ export default class extends Controller {
     
     // Remove active class and connection state classes
     this.element.classList.remove(this.activeClass)
-    this.#updateConnectionState("disconnected")
+    this.#updateConnectionState("idle")
     
     // Hide error message if visible
     this.dismissError()
     
     this.#updateJoinLeaveButton()
+    this.#updateSwitchRoomButton()
     
     // Only dispatch if element is still connected
     if (this.element.isConnected) {
@@ -1235,6 +1246,7 @@ export default class extends Controller {
       "video-call--connected",
       "video-call--reconnecting",
       "video-call--disconnected",
+      "video-call--idle",
       "video-call--quality-poor",
       "video-call--quality-fair",
       "video-call--quality-good",
@@ -1749,9 +1761,12 @@ export default class extends Controller {
       if (label) {
         label.textContent = "Unavailable"
       }
+      this.#updateSwitchRoomButton()
       return
     }
     
+    const hasActiveElsewhere = this.#hasActiveCallInAnotherRoom()
+
     // Check multiple ways room might indicate connection
     const isConnected = !!(this.#isInCall || (this.#room && (
       this.#room.state === "connected" ||
@@ -1768,10 +1783,10 @@ export default class extends Controller {
       foundButton: !!button
     })
     
-    if (isConnected) {
+    if (isConnected || hasActiveElsewhere) {
       button.classList.remove("video-call__button--join")
       button.classList.add("video-call__button--danger")
-      button.setAttribute("aria-label", "Leave video call")
+      button.setAttribute("aria-label", hasActiveElsewhere ? "Leave active video call" : "Leave video call")
       
       if (icon) {
         // Icon is already an image tag, just update if needed
@@ -1800,11 +1815,24 @@ export default class extends Controller {
         label.textContent = "Join"
       }
     }
+
+    this.#updateSwitchRoomButton()
   }
 
   #setJoinLeaveDisabled(disabled) {
     this.#joinLeaveDisabled = disabled
     this.#updateJoinLeaveButton()
+  }
+
+  #updateSwitchRoomButton() {
+    if (!this.hasSwitchRoomButtonTarget) return
+
+    const shouldShow = this.#hasActiveCallInAnotherRoom() && !this.#joinLeaveDisabled
+    this.switchRoomButtonTarget.style.display = shouldShow ? "inline-flex" : "none"
+
+    if (!shouldShow || !this.hasSwitchRoomLabelTarget) return
+    const roomLabel = this.#roomName?.trim() || `room ${this.roomIdValue}`
+    this.switchRoomLabelTarget.textContent = `Switch to ${roomLabel} voice`
   }
 
   #updateSoloLayout() {
@@ -1825,6 +1853,7 @@ export default class extends Controller {
 
   #setActiveCall(active) {
     this.#voiceStore().active = active
+    this.#updateJoinLeaveButton()
   }
 
   #clearActiveCall() {
@@ -1832,7 +1861,13 @@ export default class extends Controller {
     if (!active) return
     if (active.roomId === this.roomIdValue) {
       this.#voiceStore().active = null
+      this.#updateJoinLeaveButton()
     }
+  }
+
+  #hasActiveCallInAnotherRoom() {
+    const active = this.#getActiveCall()
+    return !!(active && active.roomId !== this.roomIdValue)
   }
 
   async #adoptActiveCallIfPresent() {
@@ -1930,6 +1965,17 @@ export default class extends Controller {
     }
   }
 
+  #leaveActiveCall() {
+    const active = this.#getActiveCall()
+    if (!active) return
+
+    this.#stopActiveTracks(active)
+    active.room.disconnect()
+    this.#voiceStore().active = null
+    this.#updateJoinLeaveButton()
+    void this.#ensureObserverIfNeeded()
+  }
+
   #persistActiveCall() {
     this.#unbindRoomEvents(this.#room)
     this.#detachTracksFromDom()
@@ -2009,11 +2055,13 @@ export default class extends Controller {
   }
 
   #updateRoomContextFromMeta() {
-    const meta = document.querySelector('meta[name="current-room-id"]')
-    const roomId = meta ? Number(meta.content) : this.roomIdValue
+    const roomIdMeta = document.querySelector('meta[name="current-room-id"]')
+    const roomNameMeta = document.querySelector('meta[name="current-room-name"]')
+    const roomId = roomIdMeta ? Number(roomIdMeta.content) : this.roomIdValue
     if (!Number.isNaN(roomId) && roomId) {
       this.roomIdValue = roomId
     }
+    this.#roomName = roomNameMeta?.content || this.#roomName
   }
 
   #attachLocalTracksForActiveCall() {

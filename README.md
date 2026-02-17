@@ -55,6 +55,24 @@ For example:
     bin/setup
     bin/rails server
 
+## One-Host CampKit + LiveKit (Docker Compose)
+
+This repo includes a single `docker-compose.yml` that runs CampKit, Redis, and a self-hosted LiveKit instance on one machine.
+
+1. Start the stack:
+
+       docker compose up --build -d
+
+2. Open CampKit:
+
+       http://localhost:3000
+
+3. LiveKit signaling endpoint for local testing:
+
+       ws://localhost:7880
+
+The app defaults to local LiveKit credentials (`devkey`/`devsecret`) and URL (`ws://localhost:7880`) unless overridden by environment variables.
+
 ## Worth Noting
 
 When you start Campfire for the first time, you’ll be guided through
