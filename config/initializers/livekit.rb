@@ -3,5 +3,3 @@ Rails.application.configure do
   config.x.livekit.api_key = ENV.fetch("LIVEKIT_API_KEY") { "" }
   config.x.livekit.api_secret = ENV.fetch("LIVEKIT_API_SECRET") { "" }
 end
-
-

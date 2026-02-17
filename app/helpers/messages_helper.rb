@@ -39,7 +39,7 @@ module MessagesHelper
         refresh_room_target: "message",
         reply_composer_outlet: "#composer"
       }, &
-  rescue Exception => e
+  rescue StandardError => e
     Sentry.capture_exception(e, extra: { message: message })
     Rails.logger.error "Exception while rendering message #{message.class.name}##{message.id}, failed with: #{e.class} `#{e.message}`"
 
@@ -59,7 +59,7 @@ module MessagesHelper
     else
       auto_link h(ContentFilters::TextMessagePresentationFilters.apply(message.body.body)), html: { target: "_blank" }
     end
-  rescue Exception => e
+  rescue StandardError => e
     Sentry.capture_exception(e, extra: { message: message })
     Rails.logger.error "Exception while generating message representation for #{message.class.name}##{message.id}, failed with: #{e.class} `#{e.message}`"
 

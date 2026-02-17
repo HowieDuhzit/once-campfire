@@ -93,7 +93,7 @@ module Api
 
         def validate_mode(value)
           mode = value.to_s
-          valid_modes = ["", "observe"]
+          valid_modes = [ "", "observe" ]
           raise ArgumentError, "Invalid mode: #{mode}" unless valid_modes.include?(mode)
           mode
         end

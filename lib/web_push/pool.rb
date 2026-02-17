@@ -29,7 +29,7 @@ class WebPush::Pool
 
       delivery_pool.post do
         deliver(notification, subscription_id)
-      rescue Exception => e
+      rescue StandardError => e
         Rails.logger.error "Error in WebPush::Pool.deliver: #{e.class} #{e.message}"
       end
     rescue Concurrent::RejectedExecutionError
@@ -44,7 +44,7 @@ class WebPush::Pool
     def invalidate_subscription_later(id)
       invalidation_pool.post do
         invalid_subscription_handler.call(id)
-      rescue Exception => e
+      rescue StandardError => e
         Rails.logger.error "Error in WebPush::Pool.invalid_subscription_handler: #{e.class} #{e.message}"
       end
     end

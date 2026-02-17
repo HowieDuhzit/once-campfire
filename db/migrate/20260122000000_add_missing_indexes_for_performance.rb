@@ -9,7 +9,7 @@ class AddMissingIndexesForPerformance < ActiveRecord::Migration[8.0]
 
     # Message ordering and pagination
     add_index :messages, :created_at unless index_exists?(:messages, :created_at)
-    add_index :messages, [:room_id, :created_at] unless index_exists?(:messages, [:room_id, :created_at])
+    add_index :messages, [ :room_id, :created_at ] unless index_exists?(:messages, [ :room_id, :created_at ])
 
     # User status and role filters
     add_index :users, :status unless index_exists?(:users, :status)
