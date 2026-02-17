@@ -44,8 +44,15 @@ export default class extends Controller {
   #roomEventHandlers = new Map()
   #turboLoadHandler = null
   #screenShareEndHandlers = new Map() // Track screen share end handlers for cleanup
+  #liveKitDebugEnabled = false
+  #forceRelayOnly = false
+  #isInCall = false
+  #isStartingCall = false
+  #observerUnavailable = false
+  #observerEnabled = false
 
   async connect() {
+    this.#configureDiagnostics()
     this.#setupEventListeners()
     this.#bindTurboHandlers()
     this.#updateRoomContextFromMeta()
@@ -108,7 +115,7 @@ export default class extends Controller {
   }
 
   toggleJoinLeave() {
-    if (this.#room) {
+    if (this.#isInCall) {
       this.leave()
     } else {
       this.startVideoCall()
@@ -136,8 +143,9 @@ export default class extends Controller {
       this.roomIdValue = event.detail.roomId
     }
 
-      console.log("Starting video call...")
+      this.#debug("Starting video call")
     try {
+      this.#isStartingCall = true
       this.#isUserDisconnect = false // Reset user disconnect flag
       await this.#endActiveCallIfNeeded()
       if (this.#observerRoom) {
@@ -150,13 +158,15 @@ export default class extends Controller {
       this.element.classList.add(this.activeClass)
       
       const { token, url, room_name } = await this.#fetchToken()
-      console.log("Got token, connecting to room...")
+      this.#debug("Got token, connecting to room")
 
       await this.#connectToRoom(url, token, room_name)
-      console.log("Connected to room, enabling camera/microphone...")
+      this.#debug("Connected to room, enabling camera/microphone")
+      this.#isInCall = true
+      this.#updateJoinLeaveButton()
 
       await this.#enableCameraAndMicrophone()
-      console.log("Camera/microphone setup complete")
+      this.#debug("Camera/microphone setup complete")
       
       this.#setLoading(false)
       this.#setActiveCall({
@@ -170,14 +180,20 @@ export default class extends Controller {
       // Button state will be updated by RoomEvent.Connected handler
       this.dispatch("started", { detail: { room: this.#room } })
     } catch (error) {
+      this.#isInCall = false
+      this.#cleanupFailedStart()
       console.error("Failed to start video call:", error)
       this.#handleError(error)
       this.#setLoading(false)
+      this.#updateJoinLeaveButton()
+    } finally {
+      this.#isStartingCall = false
     }
   }
 
   leave() {
     this.#isUserDisconnect = true
+    this.#isInCall = false
     this.#clearReconnectionTimeout()
     this.#connectionCredentials = null
     this.#reconnectionAttempts = 0
@@ -568,6 +584,13 @@ export default class extends Controller {
     }
 
     const data = await response.json()
+    this.#debug("Received LiveKit token payload", {
+      roomId,
+      roomName: data.room_name,
+      url: data.url,
+      tokenLength: typeof data.token === "string" ? data.token.length : 0,
+      mode: options.mode || "publish"
+    })
     // Store avatar URL for later use
     this.#localAvatarUrl = data.avatar_url
     return data
@@ -580,18 +603,37 @@ export default class extends Controller {
     this.LiveKit = LiveKit
     this.#videoPresets = VideoPresets // Store for later use (don't assign to module)
     
-    // Create room instance
-    this.#room = new Room()
+    const connectOnce = async (forceRelay) => {
+      const roomOptions = forceRelay ? { rtcConfig: { iceTransportPolicy: "relay" } } : {}
+      this.#debug("Creating LiveKit room", { roomName, url, forceRelayOnly: forceRelay, roomOptions })
+      this.#room = Object.keys(roomOptions).length > 0 ? new Room(roomOptions) : new Room()
+      this.#bindRoomEvents(this.#room, { observer: false })
+      await this.#room.connect(url, token)
+      this.#debug("LiveKit connect resolved", {
+        roomState: this.#room.state,
+        connectionState: this.#room.connectionState
+      })
+    }
 
     // Store credentials for reconnection
     this.#connectionCredentials = { url, token, roomName }
 
-    // Set up event handlers before connecting
-    this.#bindRoomEvents(this.#room, { observer: false })
-    
-    // Handle connection event - subscribe to existing tracks and update button
-    // Connect to room - adaptive streaming is handled automatically by LiveKit
-    await this.#room.connect(url, token)
+    try {
+      await connectOnce(this.#forceRelayOnly)
+    } catch (error) {
+      const canRetryWithRelay = !this.#forceRelayOnly && this.#isPcConnectionError(error)
+      this.#cleanupFailedStart()
+      if (!canRetryWithRelay) {
+        throw error
+      }
+
+      this.#debug("Primary connection failed, retrying with relay-only ICE policy", {
+        message: error?.message
+      })
+      this.#forceRelayOnly = true
+      localStorage.setItem("campkit.livekit.relay", "1")
+      await connectOnce(true)
+    }
     
     // Update UI after connection attempt
     this.#updateJoinLeaveButton()
@@ -949,6 +991,12 @@ export default class extends Controller {
 
   #onTrackSubscribed(track, publication, participant, options = {}) {
     const Track = this.LiveKit?.Track
+    this.#debug("Track subscribed", {
+      participant: participant?.identity,
+      kind: track?.kind,
+      source: publication?.source,
+      observer: !!options.observer
+    })
     
     if (track.kind === Track?.Kind?.Video || track.kind === "video") {
       console.log("Video track subscribed for participant:", participant.identity)
@@ -1005,12 +1053,14 @@ export default class extends Controller {
   }
 
   #onParticipantConnected(participant) {
+    this.#debug("Participant connected", { participant: participant?.identity })
     this.#remoteParticipants.set(participant.identity, participant)
     this.#updateSoloLayout()
     this.dispatch("participant-joined", { detail: { participant } })
   }
 
   #onParticipantDisconnected(participant) {
+    this.#debug("Participant disconnected", { participant: participant?.identity })
     this.#remoteParticipants.delete(participant.identity)
     this.#removeRemoteVideoElement(participant)
     this.#updateSoloLayout()
@@ -1018,6 +1068,18 @@ export default class extends Controller {
   }
 
   #onDisconnected(reason) {
+    if (this.#isStartingCall) {
+      this.#debug("Suppressing disconnect handler during start sequence", { reason })
+      return
+    }
+
+    this.#debug("Room disconnected", {
+      reason,
+      isUserDisconnect: this.#isUserDisconnect,
+      reconnectionAttempts: this.#reconnectionAttempts,
+      maxReconnectionAttempts: this.#maxReconnectionAttempts,
+      hasCredentials: !!this.#connectionCredentials
+    })
     // Only attempt reconnection if we have credentials and haven't exceeded max attempts
     if (this.#connectionCredentials && this.#reconnectionAttempts < this.#maxReconnectionAttempts) {
       // Check if this was an unexpected disconnect (not user-initiated)
@@ -1037,12 +1099,14 @@ export default class extends Controller {
   }
 
   #onReconnecting() {
+    this.#debug("Room reconnecting", { attempt: this.#reconnectionAttempts + 1 })
     this.#isReconnecting = true
     this.#updateConnectionState("reconnecting")
     this.dispatch("reconnecting", { detail: { attempt: this.#reconnectionAttempts } })
   }
 
   #onReconnected() {
+    this.#debug("Room reconnected")
     this.#isReconnecting = false
     this.#reconnectionAttempts = 0
     this.#updateConnectionState("connected")
@@ -1050,6 +1114,7 @@ export default class extends Controller {
   }
 
   #onConnectionQualityChanged(quality) {
+    this.#debug("Connection quality changed", { quality })
     this.#connectionQuality = quality
     this.#updateConnectionState("connected", quality)
     
@@ -1609,6 +1674,9 @@ export default class extends Controller {
     } else if (error.message?.includes("not configured")) {
       userMessage = "Video calling is not configured for this deployment."
       errorType = "config"
+    } else if (error.message?.toLowerCase().includes("could not establish pc connection")) {
+      userMessage = "Unable to establish media connection. If you're behind a strict firewall/NAT, enable relay mode with ?lk_relay=1 and ensure TURN is configured on LiveKit."
+      errorType = "webrtc"
     }
 
     this.#showError(userMessage, errorType)
@@ -1685,14 +1753,14 @@ export default class extends Controller {
     }
     
     // Check multiple ways room might indicate connection
-    const isConnected = this.#room && (
+    const isConnected = !!(this.#isInCall || (this.#room && (
       this.#room.state === "connected" ||
       this.#room.state === "RTC_CONNECTED" ||
       this.#room.connectionState === "connected" ||
       (this.#room.localParticipant && this.#room.localParticipant.state === "connected")
-    )
+    )))
     
-    console.log("Updating join/leave button:", { 
+    this.#debug("Updating join/leave button", {
       isConnected, 
       roomState: this.#room?.state,
       connectionState: this.#room?.connectionState,
@@ -1774,6 +1842,7 @@ export default class extends Controller {
     }
 
     this.#room = active.room
+    this.#isInCall = true
     this.#localVideoTrack = active.localVideoTrack
     this.#localAudioTrack = active.localAudioTrack
     this.#localScreenTrack = active.localScreenTrack
@@ -1790,6 +1859,9 @@ export default class extends Controller {
 
   async #ensureObserverIfNeeded() {
     if (!this.#isLiveKitConfigured()) return
+    if (!this.#observerEnabled) return
+    if (this.#observerUnavailable) return
+    if (this.#isStartingCall || this.#isInCall) return
 
     const active = this.#getActiveCall()
     if (active && active.roomId === this.roomIdValue) {
@@ -1801,7 +1873,12 @@ export default class extends Controller {
       const { token, url } = await this.#fetchToken({ mode: "observe" })
       await this.#connectObserver(url, token)
     } catch (error) {
-      console.warn("Observer connection failed:", error)
+      if (this.#isPcConnectionError(error)) {
+        this.#observerUnavailable = true
+        this.#debug("Disabling observer auto-connect after pc connection failure", { message: error?.message })
+      } else {
+        console.warn("Observer connection failed:", error)
+      }
     }
   }
 
@@ -1866,6 +1943,7 @@ export default class extends Controller {
       localScreenTrack: this.#localScreenTrack,
       connectionCredentials: this.#connectionCredentials
     })
+    this.#isInCall = true
     this.#room = null
   }
 
@@ -1976,6 +2054,13 @@ export default class extends Controller {
       participantConnected: this.#onParticipantConnected.bind(this),
       participantDisconnected: this.#onParticipantDisconnected.bind(this),
       connected: () => {
+        this.#isInCall = !observer
+        this.#debug("Room connected event", {
+          observer,
+          roomState: room?.state,
+          connectionState: room?.connectionState,
+          remoteParticipantCount: room?.remoteParticipants?.size || 0
+        })
         if (observer) {
           this.#syncRemoteParticipants(room, { observer: true })
           this.#updateSoloLayout()
@@ -1999,6 +2084,7 @@ export default class extends Controller {
 
     if (observer) {
       handlers.disconnected = () => {
+        this.#debug("Observer room disconnected")
         this.#onObserverDisconnected(room)
       }
       room.on(RoomEvent.Disconnected, handlers.disconnected)
@@ -2011,6 +2097,30 @@ export default class extends Controller {
       room.on(RoomEvent.Reconnecting, handlers.reconnecting)
       room.on(RoomEvent.Reconnected, handlers.reconnected)
       room.on(RoomEvent.ConnectionQualityChanged, handlers.qualityChanged)
+      handlers.connectionStateChanged = (state) => {
+        this.#debug("Connection state changed", { state, roomState: room?.state, connectionState: room?.connectionState })
+      }
+      handlers.signalConnected = () => {
+        this.#debug("Signal connected")
+      }
+      handlers.signalReconnecting = () => {
+        this.#debug("Signal reconnecting")
+      }
+      handlers.signalReconnected = () => {
+        this.#debug("Signal reconnected")
+      }
+      handlers.mediaDevicesError = (error) => {
+        this.#debug("Media devices error", { name: error?.name, message: error?.message })
+      }
+      handlers.trackSubscriptionFailed = (trackSid, participant) => {
+        this.#debug("Track subscription failed", { trackSid, participant: participant?.identity })
+      }
+      this.#bindOptionalRoomEvent(room, RoomEvent.ConnectionStateChanged, handlers.connectionStateChanged, handlers)
+      this.#bindOptionalRoomEvent(room, RoomEvent.SignalConnected, handlers.signalConnected, handlers)
+      this.#bindOptionalRoomEvent(room, RoomEvent.SignalReconnecting, handlers.signalReconnecting, handlers)
+      this.#bindOptionalRoomEvent(room, RoomEvent.SignalReconnected, handlers.signalReconnected, handlers)
+      this.#bindOptionalRoomEvent(room, RoomEvent.MediaDevicesError, handlers.mediaDevicesError, handlers)
+      this.#bindOptionalRoomEvent(room, RoomEvent.TrackSubscriptionFailed, handlers.trackSubscriptionFailed, handlers)
     }
 
     this.#roomEventHandlers.set(room, handlers)
@@ -2038,7 +2148,21 @@ export default class extends Controller {
     if (handlers.qualityChanged) {
       room.off(RoomEvent.ConnectionQualityChanged, handlers.qualityChanged)
     }
+    if (handlers.optional) {
+      handlers.optional.forEach(([eventName, handler]) => {
+        room.off(eventName, handler)
+      })
+    }
     this.#roomEventHandlers.delete(room)
+  }
+
+  #bindOptionalRoomEvent(room, eventName, handler, handlers) {
+    if (!eventName || typeof handler !== "function") return
+    room.on(eventName, handler)
+    if (!handlers.optional) {
+      handlers.optional = []
+    }
+    handlers.optional.push([ eventName, handler ])
   }
 
   #syncRemoteParticipants(room, options = {}) {
@@ -2067,6 +2191,65 @@ export default class extends Controller {
       return this.livekitConfiguredValue
     }
     return true
+  }
+
+  #configureDiagnostics() {
+    const params = new URLSearchParams(window.location.search)
+    const debugParam = params.get("lk_debug")
+    const relayParam = params.get("lk_relay")
+    const observeParam = params.get("lk_observe")
+
+    if (debugParam !== null) {
+      localStorage.setItem("campkit.livekit.debug", debugParam)
+    }
+    if (relayParam !== null) {
+      localStorage.setItem("campkit.livekit.relay", relayParam)
+    }
+    this.#liveKitDebugEnabled = this.#isTruthyFlag(localStorage.getItem("campkit.livekit.debug")) || window.CAMPKIT_LIVEKIT_DEBUG === true
+    this.#forceRelayOnly = this.#isTruthyFlag(localStorage.getItem("campkit.livekit.relay")) || window.CAMPKIT_LIVEKIT_RELAY_ONLY === true
+    this.#observerEnabled = this.#isTruthyFlag(observeParam) || window.CAMPKIT_LIVEKIT_OBSERVER === true
+    this.#observerUnavailable = false
+
+    this.#debug("LiveKit diagnostics configured", {
+      debugEnabled: this.#liveKitDebugEnabled,
+      forceRelayOnly: this.#forceRelayOnly,
+      observerEnabled: this.#observerEnabled,
+      roomId: this.roomIdValue
+    })
+  }
+
+  #isTruthyFlag(value) {
+    if (value == null) return false
+    const normalized = String(value).toLowerCase()
+    return [ "1", "true", "yes", "on" ].includes(normalized)
+  }
+
+  #debug(message, details = {}) {
+    if (!this.#liveKitDebugEnabled) return
+    console.log(`[LiveKitDebug] ${message}`, details)
+  }
+
+  #isPcConnectionError(error) {
+    const message = error?.message?.toLowerCase() || ""
+    const name = error?.name?.toLowerCase() || ""
+    return message.includes("could not establish pc connection") || name.includes("connectionerror")
+  }
+
+  #cleanupFailedStart() {
+    this.#clearReconnectionTimeout()
+    this.#reconnectionAttempts = 0
+    this.#isReconnecting = false
+    this.#connectionCredentials = null
+
+    if (this.#room) {
+      this.#unbindRoomEvents(this.#room)
+      this.#room.disconnect()
+      this.#room = null
+    }
+
+    this.#cleanupLocalTracks()
+    this.#cleanupRemoteTracks()
+    this.#updateConnectionState("disconnected")
   }
 
   async #stopScreenShare() {
