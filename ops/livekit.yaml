@@ -14,4 +14,4 @@ redis:
 
 turn:
   enabled: true
-  udp_port: 3478
+  udp_port: 3479

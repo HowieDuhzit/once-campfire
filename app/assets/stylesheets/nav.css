@@ -10,8 +10,10 @@
 
   .room--current {
     justify-content: flex-start;
-    max-inline-size: 100%;
-    width: 100%;
+    max-inline-size: none;
+    min-inline-size: 0;
+    width: auto;
+    flex: 1 1 auto;
   }
 
   .btn {
@@ -23,11 +25,19 @@
   }
 }
 
+#nav .nav__room-header {
+  align-items: center;
+  display: flex;
+  gap: var(--inline-space);
+  width: 100%;
+}
+
 #nav .nav__room-settings {
   --btn-border-radius: 50%;
   --btn-padding: 0;
 
   aspect-ratio: 1;
+  flex: 0 0 auto;
   block-size: var(--btn-size);
   inline-size: var(--btn-size);
   justify-content: center;
