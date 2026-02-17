@@ -53,9 +53,11 @@ class Membership < ApplicationRecord
     end
 
     def broadcast_membership_removed
+      user.reset_remote_connections
+
       # Remove room from sidebar for the user who left
       broadcast_remove_to user, :rooms, target: dom_id(room, :list)
-      
+
       # For direct rooms, also update the other user's sidebar
       if room.direct?
         other_user = room.users.without(user).first
@@ -64,8 +66,7 @@ class Membership < ApplicationRecord
           broadcast_remove_to other_user, :rooms, target: dom_id(room, :list)
         end
       end
-      
-      user.reset_remote_connections
+
     rescue => e
       Rails.logger.error "Failed to broadcast membership removed: #{e.message}"
     end

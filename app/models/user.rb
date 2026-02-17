@@ -64,7 +64,7 @@ class User < ApplicationRecord
     end
 
     def should_broadcast_profile_update?
-      saved_change_to_name? || saved_change_to_avatar_token? || saved_change_to_avatar?
+      saved_change_to_name?
     end
 
     def broadcast_profile_update

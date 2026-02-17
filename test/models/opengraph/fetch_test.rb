@@ -49,8 +49,8 @@ class Opengraph::FetchTest < ActiveSupport::TestCase
     # to a resolved IP, not a hostname to re-resolve.
     WebMock.disable_net_connect! allow: [ @url.host ]
     Resolv.stubs(:getaddress).with(@url.host).returns("1.2.3.4", "127.0.0.1")
-    TCPSocket.expects(:open).with(@url.host, 443, nil, nil).never
-    TCPSocket.expects(:open).with("1.2.3.4", 443, nil, nil).throws(:dns_not_rebound)
+    TCPSocket.expects(:open).with(@url.host, 443, nil, nil, open_timeout: 60).never
+    TCPSocket.expects(:open).with("1.2.3.4", 443, nil, nil, open_timeout: 60).throws(:dns_not_rebound)
 
     assert_throws :dns_not_rebound do
       @fetch.fetch_document(@url)
@@ -66,8 +66,8 @@ class Opengraph::FetchTest < ActiveSupport::TestCase
     # to a resolved IP, not a hostname to re-resolve.
     WebMock.disable_net_connect! allow: [ @url.host ]
     Resolv.stubs(:getaddress).with(@url.host).returns("1.2.3.4", "127.0.0.1")
-    TCPSocket.expects(:open).with(@url.host, 443, nil, nil).never
-    TCPSocket.expects(:open).with("1.2.3.4", 443, nil, nil).throws(:dns_not_rebound)
+    TCPSocket.expects(:open).with(@url.host, 443, nil, nil, open_timeout: 60).never
+    TCPSocket.expects(:open).with("1.2.3.4", 443, nil, nil, open_timeout: 60).throws(:dns_not_rebound)
 
     assert_throws :dns_not_rebound do
       @fetch.fetch_document(URI.parse("https://www.other.com/"), ip: "1.2.3.4")
