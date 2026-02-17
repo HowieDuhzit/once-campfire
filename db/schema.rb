@@ -10,15 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2025_12_12_154340) do
+ActiveRecord::Schema[8.2].define(version: 2026_01_22_000000) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
     t.string "join_code", null: false
+    t.string "livekit_api_key"
+    t.string "livekit_api_secret"
+    t.boolean "livekit_enabled", default: false, null: false
+    t.string "livekit_host"
+    t.string "livekit_http_url"
     t.string "name", null: false
     t.json "settings"
     t.integer "singleton_guard", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["livekit_enabled"], name: "index_accounts_on_livekit_enabled"
     t.index ["singleton_guard"], name: "index_accounts_on_singleton_guard", unique: true
   end
 
@@ -83,11 +89,13 @@ ActiveRecord::Schema[8.2].define(version: 2025_12_12_154340) do
     t.datetime "connected_at"
     t.integer "connections", default: 0, null: false
     t.datetime "created_at", null: false
+    t.datetime "in_voice_chat_at"
     t.string "involvement", default: "mentions"
     t.integer "room_id", null: false
     t.datetime "unread_at"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.index ["in_voice_chat_at"], name: "index_memberships_on_in_voice_chat_at"
     t.index ["room_id", "created_at"], name: "index_memberships_on_room_id_and_created_at"
     t.index ["room_id", "user_id"], name: "index_memberships_on_room_id_and_user_id", unique: true
     t.index ["room_id"], name: "index_memberships_on_room_id"
@@ -100,7 +108,9 @@ ActiveRecord::Schema[8.2].define(version: 2025_12_12_154340) do
     t.integer "creator_id", null: false
     t.integer "room_id", null: false
     t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["creator_id"], name: "index_messages_on_creator_id"
+    t.index ["room_id", "created_at"], name: "index_messages_on_room_id_and_created_at"
     t.index ["room_id"], name: "index_messages_on_room_id"
   end
 
@@ -122,6 +132,8 @@ ActiveRecord::Schema[8.2].define(version: 2025_12_12_154340) do
     t.string "name"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+    t.boolean "voice_enabled", default: true, null: false
+    t.index ["creator_id"], name: "index_rooms_on_creator_id"
   end
 
   create_table "searches", force: :cascade do |t|
@@ -156,6 +168,8 @@ ActiveRecord::Schema[8.2].define(version: 2025_12_12_154340) do
     t.datetime "updated_at", null: false
     t.index ["bot_token"], name: "index_users_on_bot_token", unique: true
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.index ["role"], name: "index_users_on_role"
+    t.index ["status"], name: "index_users_on_status"
   end
 
   create_table "webhooks", force: :cascade do |t|
