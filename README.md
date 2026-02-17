@@ -73,6 +73,26 @@ This repo includes a single `docker-compose.yml` that runs CampKit, Redis, and a
 
 The app defaults to local LiveKit credentials (`devkey`/`devsecret`) and URL (`ws://localhost:7880`) unless overridden by environment variables.
 
+## Coolify Deployment (Dedicated Compose)
+
+Use `docker-compose.coolify.yml` in Coolify instead of `docker-compose.yml`.
+
+- It is wired for Coolify magic vars:
+  - `SERVICE_URL_CAMPKIT_3000`
+  - `SERVICE_URL_LIVEKIT_7880`
+  - `SERVICE_FQDN_LIVEKIT`
+- It avoids binding CampKit and Redis directly on common host ports.
+- It keeps only LiveKit UDP media/TURN host bindings:
+  - `${LIVEKIT_TURN_UDP_PUBLISHED:-3479}` -> `3479/udp`
+  - `${LIVEKIT_RTC_UDP_START_PUBLISHED:-50000}`-`${LIVEKIT_RTC_UDP_END_PUBLISHED:-50100}` -> `50000-50100/udp`
+
+Required env vars in Coolify:
+
+- `SECRET_KEY_BASE`
+- `LIVEKIT_API_KEY`
+- `LIVEKIT_API_SECRET`
+- `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (optional but recommended for notifications)
+
 ## Worth Noting
 
 When you start Campfire for the first time, you’ll be guided through

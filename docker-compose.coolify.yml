@@ -1,0 +1,57 @@
+services:
+  campkit:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - livekit
+    command: ./bin/start-app
+    expose:
+      - "3000"
+    volumes:
+      - campkit-storage:/rails/storage
+    environment:
+      SERVICE_URL_CAMPKIT_3000: ""
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      DISABLE_SSL: "true"
+      SKIP_TELEMETRY: "true"
+      RAILS_ENV: production
+      REDIS_URL: redis://redis:6379
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?devsecret_devsecret_devsecret_1234}
+      LIVEKIT_URL: wss://${SERVICE_FQDN_LIVEKIT}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/up" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [ "redis-server", "--appendonly", "no", "--save", "" ]
+    expose:
+      - "6379"
+
+  livekit:
+    image: livekit/livekit-server:v1.9.3
+    restart: unless-stopped
+    depends_on:
+      - redis
+    command: [ "--config", "/etc/livekit/livekit.yaml" ]
+    volumes:
+      - ./ops/livekit.coolify.yaml:/etc/livekit/livekit.yaml:ro
+    environment:
+      SERVICE_URL_LIVEKIT_7880: ""
+      SERVICE_FQDN_LIVEKIT: ""
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret_devsecret_devsecret_1234}"
+    # Websocket signaling is exposed via Coolify proxy (SERVICE_URL_LIVEKIT_7880).
+    # UDP ports below are required for media/TURN traffic and must be free on the host.
+    ports:
+      - "${LIVEKIT_TURN_UDP_PUBLISHED:-3479}:3479/udp"
+      - "${LIVEKIT_RTC_UDP_START_PUBLISHED:-50000}-${LIVEKIT_RTC_UDP_END_PUBLISHED:-50100}:50000-50100/udp"
+
+volumes:
+  campkit-storage:
