@@ -12,15 +12,15 @@ services:
       - campkit-storage:/rails/storage
     environment:
       SERVICE_URL_CAMPKIT_3000: ""
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-replace-me-in-coolify}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       DISABLE_SSL: "true"
       SKIP_TELEMETRY: "true"
       RAILS_ENV: production
       REDIS_URL: redis://redis:6379
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?devkey}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?devsecret_devsecret_devsecret_1234}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devsecret_devsecret_devsecret_1234}
       LIVEKIT_URL: wss://${SERVICE_FQDN_LIVEKIT}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/up" ]
