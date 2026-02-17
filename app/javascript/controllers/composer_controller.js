@@ -10,11 +10,16 @@ export default class extends Controller {
   static outlets = [ "messages" ]
 
   #files = []
+  #previewUrls = []
 
   connect() {
     if (!this.#usingTouchDevice) {
       onNextEventLoopTick(() => this.textTarget.focus())
     }
+  }
+
+  disconnect() {
+    this.#revokePreviewUrls()
   }
 
   submit(event) {
@@ -162,6 +167,7 @@ export default class extends Controller {
   }
 
   #updateFileList() {
+    this.#revokePreviewUrls()
     this.#files.sort((a, b) => a.name.localeCompare(b.name))
 
     const fileNodes = this.#files.map((file, index) => {
@@ -174,7 +180,13 @@ export default class extends Controller {
       node.dataset.action = "composer#fileUnpicked"
       node.dataset.composerIndexParam = index
       node.className = "btn btn--plain composer__file txt-normal position-relative unpad flex-column"
-      node.innerHTML = file.type.match(/^image\/.*/) ? `<img role="presentation" class="flex-item-no-shrink composer__file-thumbnail" src="${URL.createObjectURL(file)}">` : `<span class="composer__file-thumbnail composer__file-thumbnail--common colorize--black"></span>`
+      if (file.type.match(/^image\/.*/)) {
+        const previewUrl = URL.createObjectURL(file)
+        this.#previewUrls.push(previewUrl)
+        node.innerHTML = `<img role="presentation" class="flex-item-no-shrink composer__file-thumbnail" src="${previewUrl}">`
+      } else {
+        node.innerHTML = `<span class="composer__file-thumbnail composer__file-thumbnail--common colorize--black"></span>`
+      }
       node.innerHTML += `<span class="pad-inline txt-small flex align-center max-width composer__file-caption"><span class="overflow-ellipsis">${escapeHTML(filename)}.</span><span class="flex-item-no-shrink">${escapeHTML(extension)}</span></span>`
 
       return node
@@ -190,5 +202,10 @@ export default class extends Controller {
         <div>${escapeHTML(filename)} - <span>${percent}%</span></div>
       </div>
     `
+  }
+
+  #revokePreviewUrls() {
+    this.#previewUrls.forEach((url) => URL.revokeObjectURL(url))
+    this.#previewUrls = []
   }
 }

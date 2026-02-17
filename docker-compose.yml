@@ -6,8 +6,8 @@ services:
       - redis
       - livekit
     command: ./bin/start-app
-    expose:
-      - "3000"
+    ports:
+      - "${CAMPKIT_PUBLISHED_PORT:-3000}:3000"
     volumes:
       - campkit-storage:/rails/storage
     environment:

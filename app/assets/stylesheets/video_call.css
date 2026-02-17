@@ -336,6 +336,11 @@
   background-color: rgba(0, 0, 0, 0.9);
 }
 
+.video-call__remote-control-button:focus-visible {
+  outline: 2px solid var(--color-selected-dark);
+  outline-offset: 2px;
+}
+
 .video-call__remote-control-icon {
   display: flex;
   align-items: center;

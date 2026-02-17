@@ -1,5 +1,4 @@
 import { Controller } from "@hotwired/stimulus"
-import { getCookie, setCookie } from "lib/cookie"
 
 export default class extends Controller {
   static classes = [ "prompting" ]
@@ -11,8 +10,13 @@ export default class extends Controller {
     }
   }
 
+  disconnect() {
+    window.removeEventListener("beforeinstallprompt", this.#preventPrompt)
+    window.removeEventListener("appinstalled", this.#installed)
+  }
+
   promptInstall = () => {
-    this.deferredPrompt.prompt()
+    this.deferredPrompt?.prompt()
   }
 
   #installed = () => {

@@ -4,7 +4,7 @@ export default class extends Controller {
   static values = { title: String, text: String, url: String, files: String }
 
   connect() {
-    this.element.hidden = !navigator.canShare
+    this.element.hidden = typeof navigator.share !== "function"
   }
 
   async share() {
@@ -18,11 +18,14 @@ export default class extends Controller {
       data.url = this.urlValue
     }
 
-    if (this.filesValue) {
-      data.files = [ await this.#getFileObject()]
+    if (this.filesValue && this.#canShareFiles) {
+      const file = await this.#getFileObject()
+      if (navigator.canShare({ files: [ file ] })) {
+        data.files = [ file ]
+      }
     }
 
-    return data;
+    return data
   }
 
   async #getFileObject() {
@@ -32,5 +35,9 @@ export default class extends Controller {
     const fileName = `${randomPrefix}.${blob.type.split('/').pop()}`
 
     return new File([ blob ], fileName, { type: blob.type })
+  }
+
+  get #canShareFiles() {
+    return typeof navigator.canShare === "function"
   }
 }

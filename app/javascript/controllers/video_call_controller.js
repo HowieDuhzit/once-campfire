@@ -119,6 +119,8 @@ export default class extends Controller {
   }
 
   toggleJoinLeave() {
+    if (this.#isStartingCall) return
+
     if (this.#isInCall) {
       this.leave()
     } else if (this.#hasActiveCallInAnotherRoom()) {
@@ -134,12 +136,14 @@ export default class extends Controller {
 
 
   async startVideoCall(event) {
+    if (this.#isStartingCall) return
+
     if (!this.#isLiveKitConfigured()) {
       this.#showError("LiveKit is not configured for this deployment.", "config")
       return
     }
     if (this.#room) {
-      console.log("Already connected to room")
+      this.#debug("Already connected to room")
       return // Already connected
     }
     
@@ -156,6 +160,7 @@ export default class extends Controller {
       this.#debug("Starting video call")
     try {
       this.#isStartingCall = true
+      this.#updateJoinLeaveButton()
       this.#isUserDisconnect = false // Reset user disconnect flag
       await this.#endActiveCallIfNeeded()
       if (this.#observerRoom) {
@@ -198,6 +203,7 @@ export default class extends Controller {
       this.#updateJoinLeaveButton()
     } finally {
       this.#isStartingCall = false
+      this.#updateJoinLeaveButton()
     }
   }
 
@@ -806,7 +812,7 @@ export default class extends Controller {
       try {
         track.attach(element)
         element.style.display = "block"
-        console.log("Video track attached to element:", element)
+        this.#debug("Video track attached", { hasElement: !!element })
         
         // Hide placeholder for local video
         if (this.hasLocalPlaceholderTarget && element === this.localVideoTarget) {
@@ -1010,7 +1016,7 @@ export default class extends Controller {
     })
     
     if (track.kind === Track?.Kind?.Video || track.kind === "video") {
-      console.log("Video track subscribed for participant:", participant.identity)
+      this.#debug("Video track subscribed for participant", { participant: participant.identity })
       const videoElement = this.#createRemoteVideoElement(participant)
       if (videoElement) {
         this.#attachVideoTrack(track, videoElement)
@@ -1034,7 +1040,7 @@ export default class extends Controller {
         if (options.observer) {
           audioElement.muted = true
         }
-        console.log("Audio track attached for participant:", participant.identity)
+        this.#debug("Audio track attached for participant", { participant: participant.identity })
       }
     }
   }
@@ -1170,7 +1176,10 @@ export default class extends Controller {
         this.#localVideoTrack.setEncoding(videoPreset.encoding)
       }
       
-      console.log(`Video quality adjusted to ${quality === 4 ? '1080p' : quality === 3 ? '720p' : quality === 2 ? '540p' : '360p'} based on connection quality: ${quality}`)
+      this.#debug("Video quality adjusted", {
+        quality,
+        profile: quality === 4 ? "1080p" : quality === 3 ? "720p" : quality === 2 ? "540p" : "360p"
+      })
     } catch (error) {
       console.warn("Failed to adapt video quality:", error)
     }
@@ -1331,13 +1340,13 @@ export default class extends Controller {
       // Load avatar URL asynchronously
       this.#loadAvatarForPlaceholder(participant, placeholder)
 
-      console.log("Created remote video container for participant:", participant.identity)
+      this.#debug("Created remote video container for participant", { participant: participant.identity })
     } else {
       // Container exists (maybe created by audio track), find or create video element
       let videoElement = container.querySelector('[data-video-track="true"]')
       if (!videoElement) {
         // Container exists but no video element - create it
-        console.log("Container exists but no video element, creating video element for participant:", participant.identity)
+        this.#debug("Container exists without remote video element", { participant: participant.identity })
         videoElement = document.createElement("video")
         videoElement.autoplay = true
         videoElement.playsInline = true
@@ -1587,7 +1596,7 @@ export default class extends Controller {
   }
 
   #updateMuteButtonState() {
-    if (!this.hasMuteButton || !this.muteButtonTarget) return
+    if (!this.hasMuteButtonTarget) return
     
     let isMuted = true // Default to muted if no track
     
@@ -1660,8 +1669,6 @@ export default class extends Controller {
 
     // Browser-specific error detection
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-    const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1
-
     // Determine error type with better detection
     if (error.name === "NotAllowedError" || error.message?.toLowerCase().includes("permission")) {
       userMessage = isSafari
@@ -1733,12 +1740,12 @@ export default class extends Controller {
     let icon = null
     let label = null
     
-    if (this.hasJoinLeaveButton) {
+    if (this.hasJoinLeaveButtonTarget) {
       button = this.joinLeaveButtonTarget
-      if (this.hasJoinLeaveIcon) {
+      if (this.hasJoinLeaveIconTarget) {
         icon = this.joinLeaveIconTarget
       }
-      if (this.hasJoinLeaveLabel) {
+      if (this.hasJoinLeaveLabelTarget) {
         label = this.joinLeaveLabelTarget
       }
     } else {
@@ -1760,6 +1767,18 @@ export default class extends Controller {
       button.setAttribute("aria-label", "Video call unavailable")
       if (label) {
         label.textContent = "Unavailable"
+      }
+      this.#updateSwitchRoomButton()
+      return
+    }
+
+    if (this.#isStartingCall) {
+      button.disabled = true
+      button.classList.remove("video-call__button--danger")
+      button.classList.add("video-call__button--join")
+      button.setAttribute("aria-label", "Joining video call")
+      if (label) {
+        label.textContent = "Joining..."
       }
       this.#updateSwitchRoomButton()
       return
@@ -2255,7 +2274,8 @@ export default class extends Controller {
     }
     this.#liveKitDebugEnabled = this.#isTruthyFlag(localStorage.getItem("campkit.livekit.debug")) || window.CAMPKIT_LIVEKIT_DEBUG === true
     this.#forceRelayOnly = this.#isTruthyFlag(localStorage.getItem("campkit.livekit.relay")) || window.CAMPKIT_LIVEKIT_RELAY_ONLY === true
-    this.#observerEnabled = this.#isTruthyFlag(observeParam) || window.CAMPKIT_LIVEKIT_OBSERVER === true
+    const observerRequested = this.#isTruthyFlag(observeParam) || window.CAMPKIT_LIVEKIT_OBSERVER === true
+    this.#observerEnabled = observerRequested && this.#liveKitDebugEnabled
     this.#observerUnavailable = false
 
     this.#debug("LiveKit diagnostics configured", {

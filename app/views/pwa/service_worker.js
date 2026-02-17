@@ -7,7 +7,7 @@ async function showNotification({ title, options }) {
   return self.registration.showNotification(title, options)
 }
 
-async function updateBadgeCount({ data: { badge } }) {
+async function updateBadgeCount({ data: { badge } = {} } = {}) {
   return self.navigator.setAppBadge?.(badge || 0)
 }
 

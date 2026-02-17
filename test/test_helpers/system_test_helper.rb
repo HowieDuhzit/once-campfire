@@ -14,9 +14,18 @@ module SystemTestHelper
   end
 
   def join_room(room)
-    visit room_url(room)
-    wait_for_cable_connection
-    dismiss_pwa_install_prompt
+    attempts = 0
+
+    begin
+      visit room_url(room)
+      wait_for_cable_connection
+      dismiss_pwa_install_prompt
+    rescue Selenium::WebDriver::Error::StaleElementReferenceError
+      attempts += 1
+      raise if attempts >= 3
+      sleep 0.1
+      retry
+    end
   end
 
   def send_message(message)
@@ -49,8 +58,16 @@ module SystemTestHelper
   end
 
   def dismiss_pwa_install_prompt
-    if page.has_css?("[data-pwa-install-target~='dialog']", visible: :visible, wait: 5)
-      click_on("Close")
+    return unless page.has_css?("[data-pwa-install-target~='dialog']", visible: :visible, wait: 5)
+
+    attempts = 0
+    begin
+      find("button", text: "Close", match: :first).click
+    rescue Selenium::WebDriver::Error::StaleElementReferenceError
+      attempts += 1
+      raise if attempts >= 3
+      sleep 0.1
+      retry
     end
   end
 end

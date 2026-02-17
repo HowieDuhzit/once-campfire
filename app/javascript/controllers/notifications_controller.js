@@ -102,6 +102,7 @@ export default class extends Controller {
         this.#syncPushSubscription(subscription)
         this.dispatch("ready")
       })
+      .catch(() => this.#revealNotAllowedNotice())
   }
 
   async #syncPushSubscription(subscription) {
