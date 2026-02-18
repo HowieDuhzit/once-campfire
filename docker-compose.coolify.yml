@@ -40,9 +40,9 @@ services:
     restart: unless-stopped
     depends_on:
       - redis
-    command: [ "--config", "/etc/livekit/livekit.yaml" ]
+    command: [ "--config", "/etc/livekit/livekit.coolify.yaml" ]
     volumes:
-      - ./ops/livekit.coolify.yaml:/etc/livekit/livekit.yaml:ro
+      - ./ops:/etc/livekit:ro
     environment:
       SERVICE_URL_LIVEKIT_7880: ""
       SERVICE_FQDN_LIVEKIT: ""
