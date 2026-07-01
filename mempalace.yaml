@@ -1,0 +1,36 @@
+wing: campkit
+rooms:
+- name: app
+  description: Files from app/
+- name: bin
+  description: Files from bin/
+- name: configuration
+  description: Files from config/
+- name: backend
+  description: Files from db/
+- name: lib
+  description: Files from lib/
+- name: log
+  description: Files from log/
+- name: public
+  description: Files from public/
+- name: script
+  description: Files from script/
+- name: testing
+  description: Files from test/
+- name: tmp
+  description: Files from tmp/
+- name: vendor
+  description: Files from vendor/
+- name: certs
+  description: Files from certs/
+- name: storage
+  description: Files from storage/
+- name: ops
+  description: Files from ops/
+- name: design
+  description: Files from assets/
+- name: frontend
+  description: Files from views/
+- name: general
+  description: Files that don't fit other rooms
